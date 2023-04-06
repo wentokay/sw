@@ -1,0 +1,208 @@
+import { addressLookupTableAccountParser, BackgroundSolanaConnection, CHANNEL_SOLANA_CONNECTION_INJECTED_REQUEST, CHANNEL_SOLANA_CONNECTION_RPC_UI, ChannelAppUi, ChannelContentScript, deserializeTokenAccountsFilter, deserializeTransaction, getLogger, SOLANA_CONNECTION_GET_MULTIPLE_ACCOUNTS_INFO, SOLANA_CONNECTION_RPC_CONFIRM_TRANSACTION, SOLANA_CONNECTION_RPC_CUSTOM_SPL_METADATA_URI, SOLANA_CONNECTION_RPC_CUSTOM_SPL_TOKEN_ACCOUNTS, SOLANA_CONNECTION_RPC_GET_ACCOUNT_INFO, SOLANA_CONNECTION_RPC_GET_ACCOUNT_INFO_AND_CONTEXT, SOLANA_CONNECTION_RPC_GET_ADDRESS_LOOKUP_TABLE, SOLANA_CONNECTION_RPC_GET_BALANCE, SOLANA_CONNECTION_RPC_GET_BLOCK_TIME, SOLANA_CONNECTION_RPC_GET_CONFIRMED_SIGNATURES_FOR_ADDRESS_2, SOLANA_CONNECTION_RPC_GET_FEE_FOR_MESSAGE, SOLANA_CONNECTION_RPC_GET_LATEST_BLOCKHASH, SOLANA_CONNECTION_RPC_GET_LATEST_BLOCKHASH_AND_CONTEXT, SOLANA_CONNECTION_RPC_GET_MINIMUM_BALANCE_FOR_RENT_EXEMPTION, SOLANA_CONNECTION_RPC_GET_PARSED_ACCOUNT_INFO, SOLANA_CONNECTION_RPC_GET_PARSED_PROGRAM_ACCOUNTS, SOLANA_CONNECTION_RPC_GET_PARSED_TOKEN_ACCOUNTS_BY_OWNER, SOLANA_CONNECTION_RPC_GET_PARSED_TRANSACTION, SOLANA_CONNECTION_RPC_GET_PARSED_TRANSACTIONS, SOLANA_CONNECTION_RPC_GET_PROGRAM_ACCOUNTS, SOLANA_CONNECTION_RPC_GET_SLOT, SOLANA_CONNECTION_RPC_GET_TOKEN_ACCOUNT_BALANCE, SOLANA_CONNECTION_RPC_GET_TOKEN_ACCOUNTS_BY_OWNER, SOLANA_CONNECTION_RPC_GET_TOKEN_LARGEST_ACCOUNTS, SOLANA_CONNECTION_RPC_SEND_RAW_TRANSACTION, withContext, withContextPort, } from "@coral-xyz/common";
+import { PublicKey, VersionedMessage } from "@solana/web3.js";
+import { decode } from "bs58";
+const logger = getLogger("solana-connection");
+export function start(cfg, events, b) {
+    const solanaConnection = ChannelAppUi.server(CHANNEL_SOLANA_CONNECTION_RPC_UI);
+    solanaConnection.handler(withContextPort(b, events, handle));
+    const solanaConnectionInjected = (() => {
+        if (cfg.isMobile)
+            return;
+        const s = ChannelContentScript.server(CHANNEL_SOLANA_CONNECTION_INJECTED_REQUEST);
+        s.handler(withContext(b, events, handleInjected));
+        return s;
+    })();
+    return {
+        solanaConnection,
+        solanaConnectionInjected,
+    };
+}
+async function handleInjected(ctx, msg) {
+    logger.debug(`handle solana connection injection ${msg.method}`, ctx, msg);
+    return await handleImpl(ctx, msg);
+}
+async function handle(ctx, msg) {
+    logger.debug(`handle solana connection extension ui ${msg.method}`, msg);
+    return await handleImpl(ctx, msg);
+}
+async function handleImpl(ctx, msg) {
+    const { method, params } = msg;
+    switch (method) {
+        case SOLANA_CONNECTION_RPC_GET_ACCOUNT_INFO:
+            return await handleGetAccountInfo(ctx, params[0], params[1]);
+        case SOLANA_CONNECTION_RPC_GET_ACCOUNT_INFO_AND_CONTEXT:
+            return await handleGetAccountInfoAndContext(ctx, params[0], params[1]);
+        case SOLANA_CONNECTION_RPC_GET_LATEST_BLOCKHASH:
+            return await handleGetLatestBlockhash(ctx, params[1]);
+        case SOLANA_CONNECTION_RPC_GET_LATEST_BLOCKHASH_AND_CONTEXT:
+            return await handleGetLatestBlockhashAndContext(ctx, params[1]);
+        case SOLANA_CONNECTION_RPC_GET_TOKEN_ACCOUNTS_BY_OWNER:
+            return await handleGetTokenAccountsByOwner(ctx, params[0], params[1], params[2]);
+        case SOLANA_CONNECTION_RPC_SEND_RAW_TRANSACTION:
+            return await handleSendRawTransaction(ctx, params[0], params[1]);
+        case SOLANA_CONNECTION_RPC_CONFIRM_TRANSACTION:
+            return await handleConfirmTransaction(ctx, params[0], params[1]);
+        case SOLANA_CONNECTION_GET_MULTIPLE_ACCOUNTS_INFO:
+            return await handleGetMultipleAccountsInfo(ctx, params[0], params[1]);
+        case SOLANA_CONNECTION_RPC_GET_CONFIRMED_SIGNATURES_FOR_ADDRESS_2:
+            return await handleGetConfirmedSignaturesForAddress2(ctx, params[0], params[1], params[2]);
+        case SOLANA_CONNECTION_RPC_GET_PARSED_TRANSACTION:
+            return await handleGetParsedTransaction(ctx, params[0], params[1]);
+        case SOLANA_CONNECTION_RPC_GET_PARSED_TRANSACTIONS:
+            return await handleGetParsedTransactions(ctx, params[0], params[1]);
+        case SOLANA_CONNECTION_RPC_CUSTOM_SPL_TOKEN_ACCOUNTS:
+            return await handleCustomSplTokenAccounts(ctx, params[0]);
+        case SOLANA_CONNECTION_RPC_CUSTOM_SPL_METADATA_URI:
+            return await handleCustomSplMetadataUri(ctx, params[0], params[1]);
+        case SOLANA_CONNECTION_RPC_GET_PROGRAM_ACCOUNTS:
+            return await handleGetProgramAccounts(ctx, params[0], params[1]);
+        case SOLANA_CONNECTION_RPC_GET_FEE_FOR_MESSAGE:
+            return await handleGetFeeForMessage(ctx, params[0], params[1]);
+        case SOLANA_CONNECTION_RPC_GET_MINIMUM_BALANCE_FOR_RENT_EXEMPTION:
+            return await handleGetMinimumBalanceForRentExemption(ctx, params[0], params[1]);
+        case SOLANA_CONNECTION_RPC_GET_TOKEN_ACCOUNT_BALANCE:
+            return await handleGetTokenAccountBalance(ctx, params[0], params[1]);
+        case SOLANA_CONNECTION_RPC_GET_BALANCE:
+            return await handleGetBalance(ctx, params[0], params[1]);
+        case SOLANA_CONNECTION_RPC_GET_SLOT:
+            return await handleGetSlot(ctx, params[0]);
+        case SOLANA_CONNECTION_RPC_GET_BLOCK_TIME:
+            return await handleGetBlockTime(ctx, params[0]);
+        case SOLANA_CONNECTION_RPC_GET_PARSED_TOKEN_ACCOUNTS_BY_OWNER:
+            return await handleGetParsedTokenAccountsByOwner(ctx, params[0], params[1], params[2]);
+        case SOLANA_CONNECTION_RPC_GET_TOKEN_LARGEST_ACCOUNTS:
+            return await handleGetTokenLargestAccounts(ctx, params[0], params[1]);
+        case SOLANA_CONNECTION_RPC_GET_PARSED_ACCOUNT_INFO:
+            return await handleGetParsedAccountInfo(ctx, params[0], params[1]);
+        case SOLANA_CONNECTION_RPC_GET_PARSED_PROGRAM_ACCOUNTS:
+            return await handleGetParsedProgramAccounts(ctx, params[0], params[1]);
+        case SOLANA_CONNECTION_RPC_GET_ADDRESS_LOOKUP_TABLE:
+            return await handleGetAddressLookupTable(ctx, params[0], params[1]);
+        default:
+            throw new Error("invalid rpc method");
+    }
+}
+async function handleGetAccountInfo(ctx, pubkey, commitment) {
+    const resp = await ctx.backend.getAccountInfo(new PublicKey(pubkey), commitment);
+    return [BackgroundSolanaConnection.accountInfoToJson(resp)];
+}
+async function handleGetAccountInfoAndContext(ctx, pubkey, commitment) {
+    const resp = await ctx.backend.getAccountInfoAndContext(new PublicKey(pubkey), commitment);
+    return [resp];
+}
+async function handleGetLatestBlockhash(ctx, commitment) {
+    const resp = await ctx.backend.getLatestBlockhash(commitment);
+    return [resp];
+}
+async function handleGetLatestBlockhashAndContext(ctx, commitment) {
+    const resp = await ctx.backend.getLatestBlockhashAndContext(commitment);
+    return [resp];
+}
+async function handleGetTokenAccountsByOwner(ctx, ownerAddress, filter, commitment) {
+    let _filter;
+    // @ts-ignore
+    if (filter.mint) {
+        // @ts-ignore
+        _filter = { mint: new PublicKey(filter.mint) };
+    }
+    else {
+        // @ts-ignore
+        _filter = { programId: new PublicKey(filter.programId) };
+    }
+    const resp = await ctx.backend.getTokenAccountsByOwner(new PublicKey(ownerAddress), _filter, commitment);
+    return [resp];
+}
+async function handleSendRawTransaction(ctx, rawTxStr, options) {
+    const tx = deserializeTransaction(rawTxStr);
+    const serializedTx = tx.serialize();
+    const resp = await ctx.backend.sendRawTransaction(serializedTx, options);
+    return [resp];
+}
+async function handleConfirmTransaction(ctx, signature, commitment) {
+    if (typeof signature === "string") {
+        const { blockhash, lastValidBlockHeight } = await ctx.backend.getLatestBlockhash();
+        signature = {
+            signature,
+            blockhash,
+            lastValidBlockHeight,
+        };
+    }
+    const resp = await ctx.backend.confirmTransaction(signature, commitment);
+    return [resp];
+}
+async function handleGetMultipleAccountsInfo(ctx, pubkeys, commitment) {
+    const resp = await ctx.backend.getMultipleAccountsInfo(pubkeys.map((p) => new PublicKey(p)), commitment);
+    return [resp];
+}
+async function handleGetConfirmedSignaturesForAddress2(ctx, address, options, commitment) {
+    const resp = await ctx.backend.getConfirmedSignaturesForAddress2(new PublicKey(address), options, commitment);
+    return [resp];
+}
+async function handleGetParsedTransaction(ctx, signature, commitment) {
+    const resp = await ctx.backend.getParsedTransaction(signature, commitment);
+    return [resp];
+}
+async function handleGetParsedTransactions(ctx, signatures, commitment) {
+    const resp = await ctx.backend.getParsedTransactions(signatures, commitment);
+    return [resp];
+}
+async function handleCustomSplTokenAccounts(ctx, pubkey) {
+    const resp = await ctx.backend.customSplTokenAccounts(new PublicKey(pubkey));
+    return [BackgroundSolanaConnection.customSplTokenAccountsToJson(resp)];
+}
+async function handleCustomSplMetadataUri(ctx, nftTokens, nftTokenMetadata) {
+    const resp = await ctx.backend.customSplMetadataUri(nftTokens, nftTokenMetadata);
+    return [resp];
+}
+async function handleGetProgramAccounts(ctx, programId, configOrCommitment) {
+    const resp = await ctx.backend.getProgramAccounts(new PublicKey(programId), configOrCommitment);
+    return [resp];
+}
+async function handleGetFeeForMessage(ctx, messageStr, commitment) {
+    const message = VersionedMessage.deserialize(decode(messageStr));
+    const resp = await ctx.backend.getFeeForMessage(message, commitment);
+    return [resp];
+}
+async function handleGetMinimumBalanceForRentExemption(ctx, dataLength, commitment) {
+    const resp = await ctx.backend.getMinimumBalanceForRentExemption(dataLength, commitment);
+    return [resp];
+}
+async function handleGetTokenAccountBalance(ctx, tokenAddress, commitment) {
+    const resp = await ctx.backend.getTokenAccountBalance(new PublicKey(tokenAddress), commitment);
+    return [resp];
+}
+async function handleGetBalance(ctx, publicKey, commitment) {
+    const resp = await ctx.backend.getBalance(new PublicKey(publicKey), commitment);
+    return [resp];
+}
+async function handleGetSlot(ctx, c) {
+    const resp = await ctx.backend.getSlot(c);
+    return [resp];
+}
+async function handleGetBlockTime(ctx, slot) {
+    const resp = await ctx.backend.getBlockTime(slot);
+    return [resp];
+}
+async function handleGetParsedTokenAccountsByOwner(ctx, ownerAddress, filter, commitment) {
+    const resp = await ctx.backend.getParsedTokenAccountsByOwner(new PublicKey(ownerAddress), deserializeTokenAccountsFilter(filter), commitment);
+    return [resp];
+}
+async function handleGetTokenLargestAccounts(ctx, mintAddress, commitment) {
+    const resp = await ctx.backend.getTokenLargestAccounts(new PublicKey(mintAddress), commitment);
+    return [resp];
+}
+async function handleGetParsedAccountInfo(ctx, publicKey, commitment) {
+    const resp = await ctx.backend.getParsedAccountInfo(new PublicKey(publicKey), commitment);
+    return [resp];
+}
+async function handleGetParsedProgramAccounts(ctx, programId, configOrCommitment) {
+    const resp = await ctx.backend.getParsedProgramAccounts(new PublicKey(programId), configOrCommitment);
+    return [resp];
+}
+async function handleGetAddressLookupTable(ctx, programId, config) {
+    const resp = await ctx.backend.getAddressLookupTable(new PublicKey(programId), config);
+    // @ts-ignore
+    resp.value = addressLookupTableAccountParser.serialize(resp.value);
+    return [resp];
+}
+//# sourceMappingURL=solana-connection.js.map

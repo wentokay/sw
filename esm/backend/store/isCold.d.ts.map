@@ -1,0 +1,1 @@
+{"version":3,"file":"isCold.d.ts","sourceRoot":"","sources":["../../../../src/backend/store/isCold.ts"],"names":[],"mappings":"AAIA;;GAEG;AACH,MAAM,MAAM,UAAU,GAAG;IACvB,CAAC,YAAY,EAAE,MAAM,GAAG,OAAO,CAAC;CACjC,CAAC;AAEF,wBAAsB,SAAS,CAAC,SAAS,EAAE,MAAM,EAAE,MAAM,CAAC,EAAE,OAAO,iBAOlE;AAED,wBAAsB,SAAS,CAAC,SAAS,EAAE,MAAM,GAAG,OAAO,CAAC,OAAO,CAAC,CAOnE"}

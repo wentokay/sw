@@ -1,0 +1,1 @@
+{"version":3,"file":"migrate_0_2_0_510.d.ts","sourceRoot":"","sources":["../../../../../src/backend/store/migrations/migrate_0_2_0_510.ts"],"names":[],"mappings":"AAyBA,wBAAsB,iBAAiB,CAAC,QAAQ,EAAE;IAChD,IAAI,EAAE,MAAM,CAAC;IACb,QAAQ,EAAE,MAAM,CAAC;CAClB,iBAIA;AA2ED,wBAAsB,6BAA6B,CACjD,QAAQ,EAAE;IACR,IAAI,EAAE,MAAM,CAAC;IACb,QAAQ,EAAE,MAAM,CAAC;CAClB,EACD,QAAQ,EAAE,MAAM,iBAoCjB"}

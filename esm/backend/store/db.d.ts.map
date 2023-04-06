@@ -1,0 +1,1 @@
+{"version":3,"file":"db.d.ts","sourceRoot":"","sources":["../../../../src/backend/store/db.ts"],"names":[],"mappings":"AAEA,qBAAa,cAAc;WACZ,GAAG,CAAC,GAAG,EAAE,MAAM,GAAG,OAAO,CAAC,GAAG,CAAC;WAI9B,GAAG,CAAC,GAAG,EAAE,MAAM,EAAE,KAAK,EAAE,GAAG,GAAG,OAAO,CAAC,IAAI,CAAC;WAI3C,KAAK,IAAI,OAAO,CAAC,IAAI,CAAC;CAGpC"}
