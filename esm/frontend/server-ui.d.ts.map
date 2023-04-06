@@ -1,1 +1,0 @@
-{"version":3,"file":"server-ui.d.ts","sourceRoot":"","sources":["../../../src/frontend/server-ui.ts"],"names":[],"mappings":"AAGA,OAAO,KAAK,EAIV,YAAY,EAMb,MAAM,mBAAmB,CAAC;AAkG3B,OAAO,KAAK,EAAE,OAAO,EAAE,MAAM,iBAAiB,CAAC;AAE/C,OAAO,KAAK,EAAE,MAAM,EAAE,MAAM,EAAiB,MAAM,UAAU,CAAC;AAI9D,wBAAgB,KAAK,CAAC,IAAI,EAAE,MAAM,EAAE,MAAM,EAAE,YAAY,EAAE,CAAC,EAAE,OAAO,GAAG,MAAM,CAoB5E"}

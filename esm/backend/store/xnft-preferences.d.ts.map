@@ -1,1 +1,0 @@
-{"version":3,"file":"xnft-preferences.d.ts","sourceRoot":"","sources":["../../../../src/backend/store/xnft-preferences.ts"],"names":[],"mappings":"AAAA,OAAO,KAAK,EAAE,mBAAmB,EAAE,MAAM,mBAAmB,CAAC;AAM7D,wBAAsB,yBAAyB,CAC7C,IAAI,EAAE,MAAM,GACX,OAAO,CAAC,mBAAmB,CAAC,CAE9B;AAED,wBAAsB,yBAAyB,CAC7C,IAAI,EAAE,MAAM,EACZ,WAAW,EAAE,mBAAmB,iBAGjC"}
